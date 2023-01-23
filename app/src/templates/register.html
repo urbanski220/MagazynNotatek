@@ -1,0 +1,51 @@
+{%extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-info" role="alert">
+        {{message}}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+{% endfor %}
+
+{% if name %}
+    <div class="shadow p-3 mb-5 bg-white rounded">
+    <h2> Hey {{name}}! You can now login to your account!</h2>
+   
+    <a href="{{url_for('login')}}" 
+    class="btn btn-outline-secondary btn-sm">Login</a><br/>
+    </div>
+{% else %}
+    <h1>Register:</h1>
+    <br/>
+    <div class="shadow p-3 mb-5 bg-white rounded">
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        {{ form.name.label(class="form-label")}}
+        {{ form.name(class="form-control") }}
+        <br/>
+        {{ form.username.label(class="form-label")}}
+        {{ form.username(class="form-control") }}
+        <br/>
+        {{ form.email.label(class="form-label")}}
+        {{ form.email(class="form-control") }}
+        <br/>
+        {{ form.password_hash.label(class="form-label")}}
+        {{ form.password_hash(class="form-control") }}
+        <br/>
+        {{ form.password_hash2.label(class="form-label")}}
+        {{ form.password_hash2(class="form-control") }}
+        <br/>
+        {{ form.submit(class="btn btn-dark") }}
+    </form>
+</div>
+
+    
+{%endif%}
+
+{% endblock %}

@@ -1,0 +1,26 @@
+{%extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-info" role="alert">
+        {{message}}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+{% endfor %}
+
+<div class="shadow p-3 mb-5 bg-white rounded">
+    <h2>{{post.title}}<br/></h2>
+    By {{post.poster.username}}<br/>
+    {{post.content|safe}}
+</div>
+    <br/>
+    <a href="{{url_for('users_posts')}}" class="btn btn-outline-secondary">Back to notes</a>
+    {% if post.poster_id == current_user.id%}
+    <a href="{{url_for('edit_post', id=post.id)}}" class="btn btn-outline-secondary">Edit note</a>
+    <a href="{{url_for('delete_post', id=post.id)}}" class="btn btn-outline-danger">Delete note</a>
+    {%endif%}
+{% endblock %}

@@ -1,0 +1,37 @@
+<nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+    <a class="navbar-brand" href="{{ url_for('index')}}">SafeNotes</a>
+       
+
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('add_post')}}">Add a note</a>
+        </li> 
+
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('users_posts')}}">User's notes</a>
+        </li> 
+
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('posts')}}">Public notes</a>
+        </li> 
+
+        {% if current_user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('logout')}}">Logout</a>
+        </li> 
+
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('login')}}">Login</a>
+        </li> 
+
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('register')}}">Register</a>
+        </li> 
+        {%endif%}
+
+        
+
+      
+  
+    
+  </nav>

@@ -1,0 +1,31 @@
+version: "3"
+
+services:
+  flask:
+    build:
+      context: flask
+    container_name: flask
+    restart: always
+    networks:
+      mynetwork:
+        aliases:
+          - flask
+
+  nginx:
+    build:
+      context: nginx
+    restart: always
+    volumes:
+      - ./nginx/confi/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/self.crt:/etc/ssl/certs/self.crt:ro
+      - ./nginx/self.key:/etc/ssl/private/self.key:ro
+    ports:
+      - 80:80
+      - 443:443
+    depends_on: 
+      - flask
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:

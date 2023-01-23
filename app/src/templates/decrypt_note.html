@@ -1,0 +1,33 @@
+{%extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-info" role="alert">
+        {{message}}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+{% endfor %}
+
+<div class="shadow p-3 mb-5 bg-white rounded">
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        {{ form.password.label(class="form-label")}}
+        {{ form.password(class="form-control") }}
+        <br/>
+       
+        {{ form.submit(class="btn btn-dark") }}
+
+        {%if decrypted %}
+        {{decrypted}}
+        {%endif%}
+    </form>
+
+</div>
+    <br/>
+    <a href="{{url_for('posts')}}" class="btn btn-outline-secondary">Back to notes</a>
+{% endblock %}

@@ -1,0 +1,43 @@
+{%extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-info" role="alert">
+        {{message}}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+{% endfor %}
+
+<h1>Add a note:</h1>
+    <br/>
+    <div class="shadow p-3 mb-5 bg-white rounded">
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        {{ form.title.label(class="form-label")}}
+        {{ form.title(class="form-control") }}
+        <br/>
+        {{ form.content.label(class="form-label")}}
+        {{ form.content(class="form-control",rows="7") }}
+        <br/>
+        <div class="form-check">
+            {{ form.public(class="form-check-input") }}
+            {{ form.public.label(class="form-check-label") }}
+        </div>
+        <div class="form-check">
+            {{ form.encrypted(class="form-check-input") }}
+            {{ form.encrypted.label(class="form-check-label") }}
+        </div>
+        {{ form.password.label(class="form-label")}}
+        {{ form.password(class="form-control") }}
+        <br/>
+        {{ form.submit(class="btn btn-dark") }}
+    </form>
+    {{ ckeditor.load() }}
+    {{ ckeditor.config(name='content')}}
+
+{% endblock %}
