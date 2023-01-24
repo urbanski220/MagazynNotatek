@@ -1,8 +1,7 @@
-FROM python:3.10-slim
+FROM python:3.9-slim
 
-WORKDIR /var/www
-COPY src src
-COPY requirements.txt requirements.txt
+WORKDIR /app
+COPY . . 
 RUN pip3 install -r requirements.txt
 
 ENV FLASK_APP src/app.py

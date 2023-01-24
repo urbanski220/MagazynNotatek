@@ -26,7 +26,7 @@
     class="btn btn-outline-secondary btn-sm">View note</a>
     <a href="{{url_for('edit_post', id=post.id)}}" 
     class="btn btn-outline-secondary btn-sm">Edit note</a>
-    {%if post.encrypted == True%}
+    {%if post.encrypted == 1%}
     <a href="{{url_for('decrypt_note', id=post.id)}}" 
     class="btn btn-outline-secondary btn-sm">Decrypt note</a>
     {%endif%}

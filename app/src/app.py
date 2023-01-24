@@ -2,7 +2,7 @@ import re
 import time
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 from passlib.hash import sha256_crypt
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_ckeditor import CKEditor
@@ -17,6 +17,13 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SECRET_KEY'] = "234kj5j798sfpdsajfkad987982"
+
+tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul',
+        'h1', 'h2', 'h3', 'p', 'img', 'video', 'div', 'iframe', 'p', 'br', 'span', 'hr', 'src', 'class']
+attrs = {'*': ['class'],
+         'a': ['href', 'rel'],
+        'img': ['src', 'alt', 'style']}
 
 db = SQLAlchemy(app)
 
@@ -39,11 +46,28 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(username=form.username.data).first()
         if user:
-            if sha256_crypt.verify(form.password.data, user.password_hash):
-                login_user(user)
-                return redirect(url_for('index'))
+            #time.sleep(1)
+            if user.count_wrong_logins < 5:
+                if user.blocked == 1 and ((datetime.now() - user.date_blocked).total_seconds()/60.0) < 5:
+                    flash('Hey you failed to login to this account 5 times!\n You need to wait 5 minutes to log in again!')
+                else:    
+                    if sha256_crypt.verify(form.password.data, user.password_hash):
+                        login_user(user)
+                        user.count_wrong_logins = 0
+                        user.blocked = 0
+                        db.session.commit()
+                        return redirect(url_for('index'))
+                    else:
+                        user.count_wrong_logins += 1
+                        db.session.commit()
+                        flash('Wrong username or password!')
             else:
-                flash('Wrong username or password!')
+                flash('Hey you failed to login to this account 5 times!\n You need to wait 5 minutes to log in again!')
+                user.date_blocked = datetime.now()
+                user.blocked = 1
+                user.count_wrong_logins = 0
+                db.session.commit()
+
         else:
             flash('Wrong username or password')
     return render_template('login.html', form=form)
@@ -81,23 +105,24 @@ def add_post():
     form = PostForm()
     if form.validate_on_submit():
         poster = current_user.id
-        content = bleach.clean(form.content.data)
-        title = bleach.clean(form.title.data)
+        content = bleach.clean(form.content.data, tags=tags, attributes=attrs)
+        title = bleach.clean(form.title.data, tags=tags, attributes=attrs)
         if form.encrypted.data:
             if form.public.data:
                 flash('You cannot publish encrypted notes!')
                 return render_template('add_post.html',form=form)
-            elif form.password.data == '':
-                flash('You have to add password to encrypt your note!')
+            elif len(form.password.data) < 4:
+                flash('Password needs to be at least 4 characters long to encrypt your note!')
                 return render_template('add_post.html',form=form)
             else:
                 cipher = blowfish.Cipher(bytes(form.password.data, 'utf-8'))
                 content = b"".join(cipher.encrypt_ecb_cts(bytes(content, 'utf-8')))
-        flash(form.encrypted.data)
+        flash(content)
         post = Posts(title=title, content=content, poster_id = poster, public=form.public.data, encrypted=form.encrypted.data)
         form.title.data = ''
         form.content.data = ''
         form.public.data = ''
+        form.encrypted.data = ''
         db.session.add(post)
         db.session.commit()
 
@@ -114,8 +139,9 @@ def decrypt_note(id):
         time.sleep(1)
         cipher = blowfish.Cipher(bytes(form.password.data, 'utf-8'))
         decrypted = b"".join(cipher.decrypt_ecb_cts(post.content))
-        return render_template('decrypt_note.html', form=form, decrypted=decrypted)
-    return render_template('users_posts.html', form=form)
+        decrypted_string = str(decrypted)[2:-1].replace('\\n', '')
+        return render_template('decrypt_note.html', form=form, decrypted=decrypted_string)
+    return render_template('decrypt_note.html', form=form)
 
 
 @app.route('/posts/edit/<int:id>', methods=['GET', 'POST'])
@@ -124,8 +150,8 @@ def edit_post(id):
     post = Posts.query.get_or_404(id)
     form = PostForm()
     if form.validate_on_submit():
-        post.title = bleach.clean(form.title.data)
-        post.content = bleach.clean(form.content.data)
+        post.title = bleach.clean(form.title.data, tags=tags, attributes=attrs)
+        post.content = bleach.clean(form.content.data, tags=tags, attributes=attrs)
 
         db.session.add(post)
         db.session.commit()
@@ -155,15 +181,15 @@ def delete_post(id):
             
             flash('Note was deleted')
             posts = Posts.query.order_by(Posts.date_posted)
-            return render_template('posts.html',posts=posts)
+            return render_template('users_posts.html',posts=posts)
         except:
             flash('There was a problem deleting the note')
             posts = Posts.query.order_by(Posts.date_posted)
-            return render_template('posts.html',posts=posts)
+            return render_template('users_posts.html',posts=posts)
     else:
         flash("You cannot delete someone else's note")
         posts = Posts.query.order_by(Posts.date_posted)
-        return render_template('posts.html',posts=posts)
+        return render_template('users_posts.html',posts=posts)
 
 
 @app.route('/')
@@ -265,7 +291,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 class DecryptForm(FlaskForm):
-    password = PasswordField('Password', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=4)])
     submit = SubmitField('Submit')
 
 
@@ -278,7 +304,8 @@ class Users(db.Model, UserMixin):
     password_hash = db.Column(db.String(128))
     posts = db.relationship('Posts', backref='poster')
     count_wrong_logins = db.Column(db.Integer, default=0)
-    date_blocked = db.Column(db.DateTime, default=datetime.utcnow)
+    date_blocked = db.Column(db.DateTime, default=datetime.now())
+    blocked = db.Column(db.Integer, default=0)
 
 
 

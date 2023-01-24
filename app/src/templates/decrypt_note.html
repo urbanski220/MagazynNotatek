@@ -23,7 +23,9 @@
         {{ form.submit(class="btn btn-dark") }}
 
         {%if decrypted %}
-        {{decrypted}}
+        <br/><br/>
+        Your decrypted message: <br/>
+        {{decrypted|safe}}
         {%endif%}
     </form>
 
