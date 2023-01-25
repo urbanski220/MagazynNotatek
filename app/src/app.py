@@ -47,7 +47,7 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(username=form.username.data).first()
         if user:
-            #time.sleep(1)
+            time.sleep(1)
             if user.count_wrong_logins < 5:
                 if user.blocked == 1 and ((datetime.now() - user.date_blocked).total_seconds()/60.0) < 5:
                     flash('Hey you failed to login to this account 5 times!\n You need to wait 5 minutes to log in again!')
