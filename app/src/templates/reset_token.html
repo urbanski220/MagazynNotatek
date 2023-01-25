@@ -13,24 +13,21 @@
 {% endfor %}
 
 
-    <h1>Login</h1>
+    <h1>Reset Password</h1>
     <br/><br/>
   
     <div class="shadow p-3 mb-5 bg-white rounded">
     <form method="POST">
         {{ form.hidden_tag() }}
 
-        {{ form.username.label(class="form-label")}}
-        {{ form.username(class="form-control") }}
-        
         {{ form.password.label(class="form-label")}}
         {{ form.password(class="form-control") }}
         <br/>
+        {{ form.confirm_password.label(class="form-label")}}
+        {{ form.confirm_password(class="form-control") }}
+        <br/>
         {{ form.submit(class="btn btn-dark") }}
     </form>
-    <small class="text-muted ml-2">
-        <a href="{{url_for('reset_request')}}">Forgot Password?</a>
-    </small>
 </div>
 
     <br/><br/><br/>

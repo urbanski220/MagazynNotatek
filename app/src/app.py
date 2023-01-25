@@ -11,6 +11,8 @@ from wtforms import StringField, SubmitField, PasswordField, BooleanField, Valid
 from wtforms.validators import DataRequired, EqualTo, Length
 from flask_ckeditor import CKEditorField
 import bleach, blowfish
+from itsdangerous import TimedSerializer as Serializer
+import jwt
 
 
 app = Flask(__name__)
@@ -238,7 +240,45 @@ def delete(id):
             name = name,
             our_users=our_users)
 
+@app.route('/reset_password', methods=['GET','POST'])
 
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('login'))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = Users.query.filter_by(email=form.email.data).first()
+        send_reset_email(user)
+        flash('An email to reset your password has been sent')
+        return redirect(url_for('login'))
+    return render_template('reset_request.html', title='Reset Password', form=form)
+
+@app.route('/reset_password/<token>', methods=['GET','POST'])
+
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('login'))
+    user = Users.verify_reset_token(token)
+    if user is None:
+        flash('That is an invalid token or expired token')
+        return redirect(url_for('reset_request'))
+    form = ResetPasswordForm()
+    if form.validate_on_submit() and validate_password(form.password.data) == 0:
+        hashed_pw = sha256_crypt.hash(form.password.data)
+        user.password_hash = hashed_pw 
+        db.session.commit()
+        flash('Your password has been updated!')
+        return redirect(url_for('login'))
+    return render_template('reset_token.html', title='Reset Password', form=form)
+
+def send_reset_email(user):
+    token = user.get_reset_token()
+    message = f''' Here I would send an email to {user.email} with a message:
+    To reset your password visit this link:
+{url_for('reset_token', token=token, _external=True)}
+'''
+    flash(message)
+    
 
 def validate_password(password):
         if re.search(r"\d", password) is None:
@@ -295,6 +335,22 @@ class DecryptForm(FlaskForm):
     submit = SubmitField('Submit')
 
 
+class RequestResetForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired()]) 
+    submit = SubmitField('Request Password Reset')
+
+    def validate_email(self, email):
+        user = Users.query.filter_by(email=email.data).first()
+        if user is None:
+            flash('Account with that email does not exist!')
+            raise ValidationError('Account with that email does not exist!')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords Must Match!')])
+    submit = SubmitField('Reset Password')
+
+
 class Users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(25), nullable=False, unique=True)
@@ -307,7 +363,21 @@ class Users(db.Model, UserMixin):
     date_blocked = db.Column(db.DateTime, default=datetime.now())
     blocked = db.Column(db.Integer, default=0)
 
+    def get_reset_token(self, expires_sec=900):
+        token = jwt.encode({
+            'user_id' : self.id,
+            'exp' : datetime.utcnow() + timedelta(seconds=expires_sec)
+            }, app.config['SECRET_KEY'], algorithm="HS256")
+        return token
 
+    @staticmethod
+    def verify_reset_token(token):
+        try:
+          data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"]) 
+          user_id = data.get("user_id")
+        except:
+            return None
+        return Users.query.get(user_id)
 
 class Posts(db.Model):
     id = db.Column(db.Integer, primary_key=True)
