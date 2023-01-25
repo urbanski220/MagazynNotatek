@@ -11,7 +11,6 @@ from wtforms import StringField, SubmitField, PasswordField, BooleanField, Valid
 from wtforms.validators import DataRequired, EqualTo, Length
 from flask_ckeditor import CKEditorField
 import bleach, blowfish
-from itsdangerous import TimedSerializer as Serializer
 import jwt
 
 
@@ -119,7 +118,7 @@ def add_post():
             else:
                 cipher = blowfish.Cipher(bytes(form.password.data, 'utf-8'))
                 content = b"".join(cipher.encrypt_ecb_cts(bytes(content, 'utf-8')))
-        flash(content)
+
         post = Posts(title=title, content=content, poster_id = poster, public=form.public.data, encrypted=form.encrypted.data)
         form.title.data = ''
         form.content.data = ''
@@ -212,7 +211,7 @@ def register():
     name = None
     form = UserForm()
     if form.validate_on_submit() and validate_password(form.password_hash.data) == 0:
-        hashed_pw = sha256_crypt.hash(form.password_hash.data)
+        hashed_pw = sha256_crypt.using(salt='ochrona').hash(form.password_hash.data)
         user = Users(name=form.name.data, username=form.username.data ,email=form.email.data, password_hash=hashed_pw)
         db.session.add(user)
         db.session.commit()
@@ -220,25 +219,6 @@ def register():
         flash('You created an account!')
     return render_template('register.html', form=form, name=name)
 
-@app.route('/delete/<int:id>')
-
-def delete(id):
-    user_to_delete = Users.query.get_or_404(id)
-    name = None
-    form = UserForm()
-    try:
-        db.session.delete(user_to_delete)
-        db.session.commit()
-        flash('user deleted succesfully')
-        our_users = Users.query.order_by(Users.date_added)
-        return render_template('add_user.html', form=form,
-            name = name,
-            our_users=our_users)
-    except:
-        flash('error')
-        return render_template('add_user.html', form=form,
-            name = name,
-            our_users=our_users)
 
 @app.route('/reset_password', methods=['GET','POST'])
 
@@ -264,7 +244,7 @@ def reset_token(token):
         return redirect(url_for('reset_request'))
     form = ResetPasswordForm()
     if form.validate_on_submit() and validate_password(form.password.data) == 0:
-        hashed_pw = sha256_crypt.hash(form.password.data)
+        hashed_pw = sha256_crypt.using(salt='ochrona').hash(form.password.data)
         user.password_hash = hashed_pw 
         db.session.commit()
         flash('Your password has been updated!')
@@ -362,6 +342,7 @@ class Users(db.Model, UserMixin):
     count_wrong_logins = db.Column(db.Integer, default=0)
     date_blocked = db.Column(db.DateTime, default=datetime.now())
     blocked = db.Column(db.Integer, default=0)
+
 
     def get_reset_token(self, expires_sec=900):
         token = jwt.encode({
